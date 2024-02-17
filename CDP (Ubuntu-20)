@@ -1,0 +1,312 @@
+********************************************************
+		Cloudera Data Platform
+********************************************************
+
+
+
+-----*** Update the server ***-----
+$ sudo apt-get update && sudo apt-get dist-upgrade -y
+
+
+-----*** Disable transparent huge pages ***-----
+
+$ sudo nano /etc/init.d/disable-transparent-hugepages
+
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          disable-transparent-hugepages
+# Required-Start:    $local_fs
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Disable Linux transparent huge pages
+# Description:       Disable Linux transparent huge pages, to improve
+#                    database performance.
+### END INIT INFO
+
+case $1 in
+  start)
+    if [ -d /sys/kernel/mm/transparent_hugepage ]; then
+      thp_path=/sys/kernel/mm/transparent_hugepage
+    elif [ -d /sys/kernel/mm/redhat_transparent_hugepage ]; then
+      thp_path=/sys/kernel/mm/redhat_transparent_hugepage
+    else
+      return 0
+    fi
+
+    echo 'never' > ${thp_path}/enabled
+    echo 'never' > ${thp_path}/defrag
+
+    unset thp_path
+    ;;
+esac
+
+$ sudo chmod 755 /etc/init.d/disable-transparent-hugepages
+
+$ sudo update-rc.d disable-transparent-hugepages defaults
+
+>>Restart server
+
+
+-----*** Install NTP ***-----
+$ sudo apt-get install ntp -y 
+
+
+-----*** Set Swappiness ***-----
+sudo sysctl -a | grep vm.swappiness
+sudo sysctl vm.swappiness=1
+echo 'vm.swappiness=1' | sudo tee --append /etc/sysctl.conf
+
+
+-----*** Install psycopg2 package ***-----
+
+$ sudo apt install python -y
+
+$ curl 'https://bootstrap.pypa.io/pip/2.7/get-pip.py' > get-pip.py && sudo python get-pip.py
+
+$ sudo pip install psycopg2==2.7.5 --ignore-installed
+
+
+------------------*Create AMI CDP*-----------------------
+add tow master bec you alredy addes one master
+Two master t2.xlarge
+Three worker t2.large
+
+
+-----*** Install and start CM ***-----
+
+$ wget https://archive.cloudera.com/cm7/7.4.4/cloudera-manager-installer.bin
+
+$ chmod u+x cloudera-manager-installer.bin
+
+$ sudo ./cloudera-manager-installer.bin
+
+----------------------------------------------------------------------------------------------NEXT SCRIPT--------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
+
+*********************************************
+              CDP Admin tasks
+*********************************************
+sudo adduser hdfs
+sudo passwd hdfs
+
+sudo nano /etc/passwd    -> add hdfs line /bin/bash
+
+sudo adduser hdfs sudo
+
+su hdfs
+
+pwd
+
+*******************************
+HOW TO SETPUT THE HDFS USER
+*******************************
+hdfs dfs -mkdir /data
+
+hdfs  _> HOW TO STARTED HDFS DFS
+
+hdfs dfs  _> HOW TO RUN WITH HDFS DFS
+
+hdfs dfsadmin
+
+
+
+# Safemode off
+
+hdfs dfsadmin -safemode get
+
+hdfs dfsadmin -safemode enter
+
+nano filename
+
+ls
+hdfs dfsadmin -safemode leave
+
+hdfs dfsadmin -safemode get
+ls
+hdfs dfs -put filename /data
+
+
+
+-----***** Creating snapshots ****----
+
+hdfs dfsadmin -allowSnapshot /data
+
+hdfs dfs -createSnapshot /data snap1
+
+hdfs lsSnapshottableDir
+
+hdfs dfs -ls /data/.snapshot
+
+--> check snapshots on NN web UI
+
+
+hdfs dfs -deleteSnapshot /data snap1
+
+hdfs dfsadmin -disallowSnapshot /data
+
+
+
+-----**** Change ownerships ****-----
+
+hdfs dfs -ls /    _> ALL DIRCTORY ARE SHOWING
+
+sudo useradd username
+
+sudo addgroup groupname
+
+nano filename
+
+hdfs dfs -put filename /data
+
+hdfs dfs -ls /data
+
+hdfs dfs -chown username /data/filename
+
+hdfs dfs -chgrp groupname /data/filename
+
+hdfs dfs -ls /data
+
+EXTRA--> hdfs dfs -chmod 700 /data/abc
+
+          hdfs dfs -ls -R
+
+
+
+
+-----**** Configuring the HDFS quota ****-----
+
+wget https://raw.githubusercontent.com/tbertinmahieux/MSongsDB/master/Tasks_Demos/CoverSongs/shs_dataset_test.txt
+
+hdfs dfs -put shs_dataset_test.txt /data
+
+hdfs dfsadmin -setQuota 20 /data
+
+nano filename
+
+hdfs dfs -put filename /data
+
+
+hdfs dfsadmin -clrQuota /data
+
+hdfs dfsadmin -setSpaceQuota ___ /data
+
+
+
+hdfs dfs -count -q /path/to/directory
+quota  rem_quota  space_quota  rem_space_quota  dir_count  file_count  size  file
+ none     inf        54975      56897           3           8     786955 /u/ 
+
+hdfs dfsadmin -clrSpaceQuota /data
+
+
+-----*** Namenode metadata backup ****-----
+New Terminal
+go to cloudera
+go to hdfs
+click on instatnce
+checke namenod ip get instance
+
+
+cd /dfs/nn
+sudo su
+cd
+cd /dfs/nn
+ls
+cd current/
+ls
+nano VIRSION
+cd ..
+ls
+cd current
+nano VERSION
+cd
+
+go to first terminal*****************
+
+hdfs fsck /
+
+hdfs dfsadmin -report
+
+hdfs dfsadmin -report > report.txt
+
+hdfs dfsadmin -safemode enter
+
+hdfs dfsadmin -saveNamespace
+
+
+
+go to new/second terminal
+
+cd /dfs/nn
+ls
+cd current
+ls
+nano VERSION
+cd
+
+mkdir nnbackup
+ls
+pwd
+cd /dfs/nn
+cp -r current/ /root/nnbackup/
+cd
+cd nnbackup/
+ls
+cd current/
+ls
+cd
+
+------------------------------------go to first terminal-------------------------------------------------------
+----->>>> Leave safemode
+hdfs dfsadmin -safemode leave
+
+hdfs fsck /
+
+-----**** Filesystem check ****----
+
+hdfs fsck <path>
+hdfs fsck / -files
+
+## Options for fsck. To be given after path
+-delete         Delete corrupted files.
+-files          Print out files being checked.
+-files -blocks        Print out the block report
+-files -blocks -locations   Print out locations for every block.
+-includeSnapshots     Include snapshot data if the given path indicates a snapshottable directory or there are snapshottable            directories under it.
+-list-corruptfileblocks     Print out list of missing blocks and files they belong to.
+-move         Move corrupted files to /lost+found.
+
+
+----**** Setting Replication for a dataset ----*****
+
+hdfs dfs -setrep -w 4 /data/filename
+hdfs fsck /
+
+
+
+-----**** Yarn Administration ****----
+
+## Submit inbuild hadoop jobs (Open 4 terminals and submit same job at a time)
+
+
+yarn jar /opt/cloudera/parcels/CDH/lib/hadoop-mapreduce/hadoop-mapreduce-examples.jar pi 20 500
+
+  yarn application -list
+
+yarn application -list -appStates ALL
+
+##To get application ID use 
+
+yarn application -list
+
+yarn application -status application_1459542433815_0002
+
+## Kill an application
+
+yarn application -kill application_1459542433815_0002
+
+yarn logs -applicationId application_1459542433815_0002
+
+
+

@@ -1,0 +1,169 @@
+*********************************************
+             Apache Admin tasks
+*********************************************
+
+
+
+-----**** Creating a data pipeline from s3 to hdfs and vice versa ****-----
+cd /usr/local/hadoop/etc/hadoop
+nano core-site.xml
+
+
+<property>
+  <name>fs.s3a.access.key</name>
+  <description>AWS access key ID used by S3A file system.</description>
+  <value>AKIAYFNLJ7RMGRQDLD7M</value> 
+</property>
+
+<property>
+  <name>fs.s3a.secret.key</name>
+  <description>AWS secret key used by S3A file system.</description>
+  <value>d2HGwC9cI2oY1XdY2zUtSS9UuCNqsYL3F0BXJHhj</value>
+</property>
+
+<property>
+  <name>fs.s3.impl</name>
+  <value>org.apache.hadoop.fs.s3.S3FileSystem</value>
+  <description>The FileSystem for s3a: S3 uris.</description>
+</property>
+
+
+
+
+
+
+
+nano hadoop-env.sh
+
+export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$HADOOP_HOME/share/hadoop/tools/lib/*
+
+cd
+
+hadoop fs -cp s3a://<bucket-name>/<file-name> /user/hduser/
+
+***********************************************
+ WHENE ARE YOU NO CREAT USER OR HDUSER IN MULTINODE THE MAKE IT
+
+hdfs dfs -mkdir /user
+hdfs dfs -mkdir /user/hduser
+hdfs dfs -put hadoop-3.3.6.tar.gz /user/hduser
+***********************************************
+
+
+hdfs dfs -cp s3a://<bucket-name>/<file-name> /user/hduser/
+
+
+hdfs dfs -put filename /user/hduser
+hdfs dfs -ls /user/hduser
+
+-----**** Hadoop Archivals ****-----
+
+hadoop archive -archiveName xyz.har -p /user/ubuntu abcd hadoop-2.8.2.tar.gz /user/ubuntu
+
+
+hdfs dfs -ls /user/hduser
+
+hdfs dfs -ls -R /user/hduser
+
+hdfs dfs -ls -R har:///user/ubuntu/xyz.har
+
+
+hdfs dfs -mkdir /user/ubuntu/u
+
+hdfs dfs -cp har:///user/ubuntu/xyz.har/abcd hdfs:/user/ubuntu/
+
+hdfs dfs -ls -R /user/ubuntu/
+
+
+-----**** Trash configuration ****-----
+
+nano core-site.xml
+
+<property>
+<name>fs.trash.interval</name>
+<value>30</value>
+<description>Number of minutes between trash checkpoints. If zero, the trash feature is disabled</description>
+</property>
+<property>
+<name>fs.trash.checkpoint.interval</name>
+<value>15</value>
+</property>
+
+
+hdfs dfs -rm <file>
+
+hdfs dfs -ls -R <path>
+
+## To permanently delete without going to trash
+ hdfs dfs -rm -skipTrash <path-to-file>
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+  
+hadoop version
+
+hdfs dfs -du hdfs:/  -------------disk usage
+
+hdfs dfs -count hdfs:/ --------- file count
+
+
+-----*** Distributed copy ***-----
+
+nano core-site.xml
+
+<property>
+  <name>fs.s3a.access.key</name>
+  <description>AWS access key ID used by S3A file system.</description>
+  <value>AKIAQH2AR57J6Y2MBN6I</value> 
+</property>
+
+<property>
+  <name>fs.s3a.secret.key</name>
+  <description>AWS secret key used by S3A file system.</description>
+  <value>OsjmqGmq/OhAg6tfHuTBVkfI5pbn6cG6poqf8vzB</value>
+</property>
+
+<property>
+<name>fs.s3.impl</name>
+<value>org.apache.hadoop.fs.s3.S3FileSystem</value>
+<description>The FileSystem for s3a: S3 uris.</description>
+</property>
+
+
+
+nano mapred-site.xml
+
+<property>
+  <!-- Add to the classpath used when running an M/R job -->
+  <name>mapreduce.application.classpath</name>
+  <value>$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*,$HADOOP_MAPRED_HOME/share/hadoop/tools/lib/*</value>
+</property>
+
+
+nano hadoop-env.sh
+
+export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$HADOOP_HOME/share/hadoop/tools/lib/*
+
+
+
+hadoop distcp /user/hduser/jinga.xml s3a://<bucket-name>/
+
+hadoop distcp hdfs:///user/hduser/jinga.xml s3a://<bucket-name>/
+
+
+-----**** Changing the block size ****-----
+
+nano hdfs-site.xml
+<property>
+<name>dfs.block.size</name>
+<value>256m</value> 
+</property>
+
+
+----**** Setting Replication for a dataset ----*****
+
+hdfs dfs -setrep -w 4 <file-name>
+
+
+
